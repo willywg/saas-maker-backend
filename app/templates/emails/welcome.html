@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; color: #333; background-color: white; padding: 32px; border-radius: 8px;">
+    <h1 style="color: #18181b; margin-bottom: 24px; margin-top: 0;">
+        {{ greeting }}, {{ user_name }}!
+    </h1>
+
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
+        Gracias por registrarte en {{ app_name }}.
+    </p>
+
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 24px;">
+        Tu cuenta ha sido creada exitosamente y tu organizacion
+        <strong>{{ organization_name }}</strong> esta lista para usar.
+    </p>
+
+    <div style="text-align: center; margin: 32px 0;">
+        <a href="{{ dashboard_url }}"
+           style="background-color: #18181b; color: white; padding: 14px 28px;
+                  text-decoration: none; border-radius: 6px; display: inline-block;
+                  font-weight: 500;">
+            Ir al Dashboard
+        </a>
+    </div>
+
+    <p style="color: #666; font-size: 14px; margin-top: 32px; margin-bottom: 0;">
+        Saludos,<br>
+        El equipo de {{ app_name }}
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.txt" %}
+{% block content %}
+Invitacion a {{ organization_name }}
+
+Hola,
+
+{{ inviter_name }} te ha invitado a unirte a la organizacion "{{ organization_name }}" en {{ app_name }} como {{ role_label }}.
+
+Aceptar invitacion: {{ invite_url }}
+
+Este enlace expira el {{ expires_at }}.
+
+Si no esperabas esta invitacion, puedes ignorar este correo.
+
+Saludos,
+El equipo de {{ app_name }}
+{% endblock %}

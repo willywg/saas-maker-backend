@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                {% block content %}{% endblock %}
+            </td>
+        </tr>
+    </table>
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 20px; text-align: center;">
+                <p style="color: #999; font-size: 12px; margin: 0;">
+                    &copy; {{ year }} {{ app_name }}. Todos los derechos reservados.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

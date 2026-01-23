@@ -1,0 +1,13 @@
+{% extends "base.txt" %}
+{% block content %}
+{{ greeting }}, {{ user_name }}!
+
+Gracias por registrarte en {{ app_name }}.
+
+Tu cuenta ha sido creada exitosamente y tu organización "{{ organization_name }}" esta lista para usar.
+
+Ir al Dashboard: {{ dashboard_url }}
+
+Saludos,
+El equipo de {{ app_name }}
+{% endblock %}
