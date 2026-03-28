@@ -109,3 +109,33 @@ async def send_invitation_email(
     except Exception as e:
         # Don't propagate error - this is a background task
         logger.error(f"Failed to send invitation email to {email_to}: {e}")
+
+
+async def send_password_reset_email(
+    email_to: str,
+    user_name: str | None,
+    reset_url: str,
+    expire_minutes: int,
+) -> None:
+    """Send password reset link."""
+    try:
+        conf = get_mail_config()
+        template_vars = _get_common_template_vars()
+        template_vars.update({
+            "user_name": user_name or email_to.split("@")[0],
+            "reset_url": reset_url,
+            "expire_minutes": expire_minutes,
+        })
+
+        message = MessageSchema(
+            subject=f"Restablecer contraseña - {conf.MAIL_FROM_NAME}",
+            recipients=[email_to],
+            template_body=template_vars,
+            subtype=MessageType.html,
+        )
+
+        fm = FastMail(conf)
+        await fm.send_message(message, template_name="password_reset.html")
+        logger.info(f"Password reset email sent to {email_to}")
+    except Exception as e:
+        logger.error(f"Failed to send password reset email to {email_to}: {e}")

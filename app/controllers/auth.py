@@ -12,15 +12,21 @@ from app.db.session import get_session
 from app.models import Organization, OrganizationMember, User
 from app.schemas.auth import (
     AcceptInviteRequest,
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
     InviteInfoResponse,
+    MessageResponse,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
+    ValidateResetTokenResponse,
 )
 from app.core.config import settings
 from app.services import auth_service, invitation_service
-from app.services.email_service import send_welcome_email
+from app.services.email_service import send_password_reset_email, send_welcome_email
 
 router = APIRouter()
 
@@ -302,3 +308,118 @@ async def accept_invite(
         access_token=access_token,
         refresh_token=refresh_token,
     )
+
+
+# --- Password reset ---
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+):
+    """Request password reset. Always returns 200 (no email enumeration)."""
+    result = await auth_service.create_password_reset_token(session, request.email)
+    if result:
+        raw_token, user_name = result
+        reset_url = f"{settings.frontend_url}/reset-password/{raw_token}"
+        background_tasks.add_task(
+            send_password_reset_email,
+            email_to=request.email,
+            user_name=user_name,
+            reset_url=reset_url,
+            expire_minutes=settings.password_reset_token_expire_minutes,
+        )
+    return MessageResponse(message="Si el email existe, recibirás un correo con instrucciones")
+
+
+@router.get("/reset-password/{token}", response_model=ValidateResetTokenResponse)
+async def validate_reset_token(
+    token: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Validate a password reset token (before showing form)."""
+    result = await auth_service.validate_password_reset_token(session, token)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token inválido o expirado",
+        )
+    _, masked_email = result
+    return ValidateResetTokenResponse(email=masked_email)
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Reset password using token."""
+    success = await auth_service.reset_password_with_token(
+        session, request.token, request.new_password
+    )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token inválido o expirado",
+        )
+    return MessageResponse(message="Contraseña actualizada correctamente")
+
+
+# --- Profile management ---
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_profile(
+    request: UpdateProfileRequest,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+):
+    """Update current user profile."""
+    try:
+        updated_user = await auth_service.update_user_profile(
+            session=session,
+            user_id=user.user_id,
+            full_name=request.full_name,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    statement = select(Organization).where(Organization.id == user.organization_id)
+    result = await session.execute(statement)
+    organization = result.scalar_one_or_none()
+
+    return UserResponse(
+        id=str(updated_user.id),
+        email=updated_user.email,
+        full_name=updated_user.full_name,
+        organization_id=str(user.organization_id),
+        organization_name=organization.name if organization else "",
+        role=user.role,
+    )
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password(
+    request: ChangePasswordRequest,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+):
+    """Change password (requires current password)."""
+    try:
+        await auth_service.change_user_password(
+            session=session,
+            user_id=user.user_id,
+            current_password=request.current_password,
+            new_password=request.new_password,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    return MessageResponse(message="Contraseña actualizada correctamente")

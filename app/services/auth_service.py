@@ -1,15 +1,17 @@
 """Authentication service for user registration, login, and JWT token management."""
 
+import hashlib
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlmodel import select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.models import Organization, OrganizationMember, User
+from app.models import Organization, OrganizationMember, PasswordResetToken, User
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -171,3 +173,157 @@ async def authenticate_user(
     await session.commit()
 
     return user, organization, role
+
+
+# --- Token hashing utilities ---
+
+
+def _hash_reset_token(token: str) -> str:
+    """Hash a reset token for storage (SHA256)."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _mask_email(email: str) -> str:
+    """Mask email for display: j***n@gmail.com."""
+    local, domain = email.split("@")
+    if len(local) <= 2:
+        masked = local[0] + "***"
+    else:
+        masked = local[0] + "***" + local[-1]
+    return f"{masked}@{domain}"
+
+
+# --- Password reset ---
+
+
+async def create_password_reset_token(
+    session: AsyncSession, email: str
+) -> tuple[str, str] | None:
+    """Create a password reset token. Returns (raw_token, user_name) or None."""
+    email = email.lower().strip()
+    statement = select(User).where(User.email == email, User.is_active == True)  # noqa: E712
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return None
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = _hash_reset_token(raw_token)
+
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=datetime.utcnow()
+        + timedelta(minutes=settings.password_reset_token_expire_minutes),
+    )
+    session.add(reset_token)
+    await session.commit()
+
+    return raw_token, user.full_name
+
+
+async def validate_password_reset_token(
+    session: AsyncSession, token: str
+) -> tuple[uuid.UUID, str] | None:
+    """Validate a reset token. Returns (user_id, masked_email) or None."""
+    token_hash = _hash_reset_token(token)
+
+    statement = select(PasswordResetToken).where(
+        PasswordResetToken.token_hash == token_hash,
+        PasswordResetToken.expires_at > datetime.utcnow(),
+    )
+    result = await session.execute(statement)
+    reset_token = result.scalar_one_or_none()
+
+    if not reset_token:
+        return None
+
+    statement = select(User).where(User.id == reset_token.user_id)
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none()
+
+    if not user or not user.is_active:
+        return None
+
+    return user.id, _mask_email(user.email)
+
+
+async def reset_password_with_token(
+    session: AsyncSession, token: str, new_password: str
+) -> bool:
+    """Reset password using a valid token. Returns True on success."""
+    token_hash = _hash_reset_token(token)
+
+    statement = select(PasswordResetToken).where(
+        PasswordResetToken.token_hash == token_hash,
+        PasswordResetToken.expires_at > datetime.utcnow(),
+    )
+    result = await session.execute(statement)
+    reset_token = result.scalar_one_or_none()
+
+    if not reset_token:
+        return False
+
+    statement = select(User).where(User.id == reset_token.user_id)
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none()
+
+    if not user or not user.is_active:
+        return False
+
+    user.password_hash = hash_password(new_password)
+    session.add(user)
+
+    # Delete ALL reset tokens for this user (single-use)
+    await session.execute(
+        delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
+    )
+
+    await session.commit()
+    return True
+
+
+# --- Profile management ---
+
+
+async def update_user_profile(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    full_name: str | None = None,
+) -> User:
+    """Update user profile fields."""
+    statement = select(User).where(User.id == user_id)
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise ValueError("Usuario no encontrado")
+
+    if full_name is not None:
+        user.full_name = full_name
+
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+async def change_user_password(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    current_password: str,
+    new_password: str,
+) -> None:
+    """Change user password after verifying current password."""
+    statement = select(User).where(User.id == user_id)
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none()
+    if not user:
+        raise ValueError("Usuario no encontrado")
+
+    if not verify_password(current_password, user.password_hash):
+        raise ValueError("La contraseña actual es incorrecta")
+
+    user.password_hash = hash_password(new_password)
+    session.add(user)
+    await session.commit()

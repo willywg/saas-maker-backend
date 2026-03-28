@@ -56,6 +56,32 @@ class AcceptInviteRequest(BaseModel):
     password: str = Field(min_length=8, max_length=72)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=72)
+
+
+class ValidateResetTokenResponse(BaseModel):
+    email: str  # masked
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=72)
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
 @dataclass
 class AuthUser:
     """

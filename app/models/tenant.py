@@ -163,3 +163,19 @@ class InviteToken(SQLModel, table=True):
     def generate_token(cls) -> str:
         """Generate a secure URL-safe token."""
         return secrets.token_urlsafe(32)
+
+
+class PasswordResetToken(SQLModel, table=True):
+    """
+    Password reset tokens for account recovery.
+
+    Tokens are single-use, stored as SHA256 hash, and expire after a configurable period.
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", index=True)
+    token_hash: str = Field(max_length=64, index=True)
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=datetime.utcnow)

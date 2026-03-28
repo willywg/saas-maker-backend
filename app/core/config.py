@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     invite_token_expire_days: int = 7
     frontend_url: str = "http://localhost:5173"
 
+    # Password Reset
+    password_reset_token_expire_minutes: int = 30
+
     # Email SMTP Configuration
     smtp_host: str = "localhost"
     smtp_port: int = 1025
