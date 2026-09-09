@@ -7,12 +7,20 @@ from datetime import timedelta
 
 import bcrypt
 import jwt
+from sqlalchemy import update
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.time import utcnow
-from app.models import Organization, OrganizationMember, PasswordResetToken, User
+from app.models import (
+    EmailVerificationToken,
+    Organization,
+    OrganizationMember,
+    PasswordResetToken,
+    RefreshToken,
+    User,
+)
 
 
 def hash_password(password: str) -> str:
@@ -271,6 +279,9 @@ async def reset_password_with_token(session: AsyncSession, token: str, new_passw
     # Delete ALL reset tokens for this user (single-use)
     await session.execute(delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id))
 
+    # A password reset invalidates every existing session
+    await revoke_all_sessions(session, user.id)
+
     await session.commit()
     return True
 
@@ -304,8 +315,12 @@ async def change_user_password(
     user_id: uuid.UUID,
     current_password: str,
     new_password: str,
+    keep_refresh_token: str | None = None,
 ) -> None:
-    """Change user password after verifying current password."""
+    """Change user password after verifying current password.
+
+    Revokes every other session; ``keep_refresh_token`` (the caller's own) survives.
+    """
     statement = select(User).where(User.id == user_id)
     result = await session.execute(statement)
     user = result.scalar_one_or_none()
@@ -317,4 +332,107 @@ async def change_user_password(
 
     user.password_hash = hash_password(new_password)
     session.add(user)
+    await revoke_all_sessions(session, user.id, keep_token=keep_refresh_token)
     await session.commit()
+
+
+# --- Sessions (refresh token revocation) ---
+
+
+def hash_token(token: str) -> str:
+    """SHA256 hex digest used to store refresh/verification tokens."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def revoke_all_sessions(
+    session: AsyncSession, user_id: uuid.UUID, keep_token: str | None = None
+) -> int:
+    """Revoke every active refresh token of a user. Does not commit."""
+    stmt = (
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=utcnow())
+    )
+    if keep_token:
+        stmt = stmt.where(RefreshToken.token_hash != hash_token(keep_token))
+    result = await session.execute(stmt)
+    return result.rowcount or 0
+
+
+# --- Email verification ---
+
+
+async def create_email_verification_token(session: AsyncSession, user_id: uuid.UUID) -> str:
+    """Create a verification token (replacing previous ones). Returns the raw token."""
+    await session.execute(
+        delete(EmailVerificationToken).where(EmailVerificationToken.user_id == user_id)
+    )
+    raw_token = secrets.token_urlsafe(32)
+    session.add(
+        EmailVerificationToken(
+            user_id=user_id,
+            token_hash=hash_token(raw_token),
+            expires_at=utcnow() + timedelta(hours=settings.email_verification_token_expire_hours),
+        )
+    )
+    await session.commit()
+    return raw_token
+
+
+async def verify_email_with_token(session: AsyncSession, token: str) -> User | None:
+    """Mark the user's email as verified. Returns the user, or None if invalid/expired."""
+    statement = select(EmailVerificationToken).where(
+        EmailVerificationToken.token_hash == hash_token(token),
+        EmailVerificationToken.expires_at > utcnow(),
+    )
+    result = await session.execute(statement)
+    record = result.scalar_one_or_none()
+    if not record:
+        return None
+
+    user = await session.get(User, record.user_id)
+    if not user or not user.is_active:
+        return None
+
+    user.email_verified = True
+    session.add(user)
+    await session.execute(
+        delete(EmailVerificationToken).where(EmailVerificationToken.user_id == user.id)
+    )
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+# --- Memberships (multi-organization) ---
+
+
+async def list_user_organizations(
+    session: AsyncSession, user_id: uuid.UUID
+) -> list[tuple[Organization, str]]:
+    """Active organizations the user belongs to, with their role, oldest membership first."""
+    statement = (
+        select(Organization, OrganizationMember.role)
+        .join(OrganizationMember, Organization.id == OrganizationMember.organization_id)
+        .where(OrganizationMember.user_id == user_id)
+        .where(Organization.is_active == True)  # noqa: E712
+        .order_by(OrganizationMember.created_at)
+    )
+    result = await session.execute(statement)
+    return [(org, role) for org, role in result.all()]
+
+
+async def get_membership(
+    session: AsyncSession, user_id: uuid.UUID, organization_id: uuid.UUID
+) -> tuple[Organization, str] | None:
+    """(organization, role) if the user is a member of an active organization."""
+    statement = (
+        select(Organization, OrganizationMember.role)
+        .join(OrganizationMember, Organization.id == OrganizationMember.organization_id)
+        .where(OrganizationMember.user_id == user_id)
+        .where(Organization.id == organization_id)
+        .where(Organization.is_active == True)  # noqa: E712
+    )
+    result = await session.execute(statement)
+    row = result.first()
+    return (row[0], row[1]) if row else None

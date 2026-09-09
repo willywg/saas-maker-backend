@@ -33,9 +33,34 @@ class UserResponse(BaseModel):
     id: str
     email: str
     full_name: str | None
+    email_verified: bool
     organization_id: str
     organization_name: str
     role: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class UserOrganizationItem(BaseModel):
+    """An organization the current user belongs to."""
+
+    id: str
+    name: str
+    slug: str
+    role: str
+    is_current: bool
+
+
+class SwitchOrganizationRequest(BaseModel):
+    organization_id: uuid.UUID
+    # The caller's current refresh token; revoked when switching (optional)
+    refresh_token: str | None = None
 
 
 class InviteInfoResponse(BaseModel):
@@ -76,6 +101,8 @@ class UpdateProfileRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8, max_length=72)
+    # The caller's current refresh token; every OTHER session is revoked (optional)
+    refresh_token: str | None = None
 
 
 class MessageResponse(BaseModel):

@@ -182,3 +182,38 @@ class PasswordResetToken(SQLModel, table=True):
     token_hash: str = Field(max_length=64, index=True)
     expires_at: datetime
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class EmailVerificationToken(SQLModel, table=True):
+    """Single-use, hashed tokens to confirm a user's email address."""
+
+    __tablename__ = "email_verification_tokens"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
+    token_hash: str = Field(max_length=64, index=True)
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class RefreshToken(SQLModel, table=True):
+    """
+    Server-side record of every issued refresh token.
+
+    Enables revocation (logout, logout-all, password change) and rotation
+    (each refresh revokes the token that was used). The JWT carries the row id
+    as ``jti``; the raw token is never stored, only its SHA256.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
+    organization_id: uuid.UUID | None = Field(
+        default=None, foreign_key="organizations.id", ondelete="CASCADE"
+    )
+    token_hash: str = Field(max_length=64, unique=True, index=True)
+    user_agent: str | None = Field(default=None, max_length=255)
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=utcnow)
+    revoked_at: datetime | None = Field(default=None)

@@ -12,10 +12,12 @@ from app.core.config import settings
 # CRITICAL: Import ALL models so SQLModel.metadata registers them
 from app.models import (  # noqa: F401
     AdminUser,
+    EmailVerificationToken,
     InviteToken,
     Organization,
     OrganizationMember,
     PasswordResetToken,
+    RefreshToken,
     User,
 )
 

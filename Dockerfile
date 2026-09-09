@@ -52,4 +52,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 USER app
 
 # Run with gunicorn for production
-CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8090"]
+CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8090", "--forwarded-allow-ips=*"]

@@ -38,6 +38,17 @@ class Settings(BaseSettings):
     # Password Reset
     password_reset_token_expire_minutes: int = 30
 
+    # Email verification
+    email_verification_token_expire_hours: int = 48
+    # If true, users cannot log in until they confirm their email (invited users are
+    # verified automatically). Default false: login works, the UI shows a banner.
+    require_email_verification: bool = False
+
+    # Rate limiting (in-memory, per process). Applied to auth endpoints only.
+    # Format: "<count>/<period>", e.g. "10/minute", "100/hour".
+    rate_limit_enabled: bool = True
+    rate_limit_auth: str = "10/minute"
+
     # Email SMTP Configuration
     smtp_host: str = "localhost"
     smtp_port: int = 1025

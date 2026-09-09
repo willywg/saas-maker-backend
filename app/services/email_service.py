@@ -145,3 +145,35 @@ async def send_password_reset_email(
         logger.info(f"Password reset email sent to {email_to}")
     except Exception as e:
         logger.error(f"Failed to send password reset email to {email_to}: {e}")
+
+
+async def send_verification_email(
+    email_to: str,
+    user_name: str | None,
+    verify_url: str,
+    expire_hours: int,
+) -> None:
+    """Send the email-address confirmation link."""
+    try:
+        conf = get_mail_config()
+        template_vars = _get_common_template_vars()
+        template_vars.update(
+            {
+                "user_name": user_name or email_to.split("@")[0],
+                "verify_url": verify_url,
+                "expire_hours": expire_hours,
+            }
+        )
+
+        message = MessageSchema(
+            subject=f"Confirma tu correo - {conf.MAIL_FROM_NAME}",
+            recipients=[email_to],
+            template_body=template_vars,
+            subtype=MessageType.html,
+        )
+
+        fm = FastMail(conf)
+        await fm.send_message(message, template_name="verify_email.html")
+        logger.info(f"Verification email sent to {email_to}")
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {email_to}: {e}")

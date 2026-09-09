@@ -2,11 +2,12 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.dependencies import CurrentAdmin
+from app.core.rate_limit import auth_limit, limiter
 from app.db.session import get_session
 from app.schemas.admin import (
     AdminLoginResponse,
@@ -25,7 +26,9 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=AdminLoginResponse)
+@limiter.limit(auth_limit)
 async def admin_login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_session),
 ):

@@ -55,9 +55,17 @@ app/
 
 ### Authentication Flow
 - JWT tokens with user context (user_id, email, org_id, role)
-- Access token (30 min) + Refresh token (7 days)
+- Access token (30 min, stateless) + Refresh token (7 days, persisted in `refresh_tokens`)
+- Refresh tokens rotate on every `/auth/refresh`; they can be revoked (logout, logout-all,
+  password change/reset). Logic in `app/services/session_service.py`
 - Login expects form-data with `username` field (email value)
+- A session is scoped to one organization; `/auth/switch-organization` issues tokens for another
+  org the user belongs to, and refresh keeps that org
+- Email verification: `users.email_verified`; register sends a link, `/auth/verify-email`
+  confirms it. `REQUIRE_EMAIL_VERIFICATION=true` blocks login until verified (default false)
+- Rate limiting (slowapi, per IP, in-memory) on auth endpoints: `RATE_LIMIT_AUTH` (default 10/minute)
 - Role hierarchy: owner > admin > member
+- Admin panel tokens stay stateless (no revocation table)
 
 ### Key Dependencies (in `app/core/dependencies.py`)
 ```python
@@ -69,8 +77,16 @@ CurrentUser             # Type alias for dependency injection
 ### API Endpoints
 - `POST /auth/register` - Create user + organization
 - `POST /auth/login` - Authenticate (form-data)
-- `POST /auth/refresh` - Refresh access token
-- `GET /auth/me` - Current user info
+- `POST /auth/refresh` - Rotate tokens (old refresh token is revoked)
+- `POST /auth/logout` - Revoke a refresh token
+- `POST /auth/logout-all` - Revoke all sessions of the current user
+- `GET /auth/me` - Current user info (includes `email_verified`)
+- `PUT /auth/me` - Update profile
+- `POST /auth/change-password` - Change password (revokes other sessions)
+- `POST /auth/forgot-password`, `GET/POST /auth/reset-password` - Password recovery
+- `POST /auth/verify-email`, `POST /auth/resend-verification` - Email verification
+- `GET /auth/organizations` - Organizations the user belongs to
+- `POST /auth/switch-organization` - Tokens scoped to another organization
 - `GET /auth/invite/{token}` - Get invitation details (public)
 - `POST /auth/accept-invite` - Accept invitation
 - `GET /organizations/me` - Current organization

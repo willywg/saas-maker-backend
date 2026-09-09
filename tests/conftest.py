@@ -19,6 +19,7 @@ from collections.abc import AsyncGenerator
 os.environ.setdefault("POSTGRES_DB", "saas_template_test")
 os.environ.setdefault("JWT_SECRET_KEY", "test-only-secret-key-0123456789abcdef0123456789")
 os.environ.setdefault("DEBUG", "false")
+os.environ.setdefault("RATE_LIMIT_AUTH", "1000/minute")  # individual tests lower it
 
 import asyncpg  # noqa: E402
 import pytest  # noqa: E402
@@ -26,6 +27,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
+from app.core.rate_limit import limiter  # noqa: E402
 from app.db.session import async_engine  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -91,6 +93,12 @@ async def clean_tables(database_schema: None) -> AsyncGenerator[None]:
 
 
 @pytest.fixture(autouse=True)
+def reset_rate_limits() -> None:
+    """Each test starts with fresh rate-limit counters."""
+    limiter.reset()
+
+
+@pytest.fixture(autouse=True)
 def stub_email(monkeypatch: pytest.MonkeyPatch) -> None:
     """Never hit SMTP from tests."""
 
@@ -113,6 +121,20 @@ def captured_reset_emails(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
     import app.controllers.auth as auth_controller
 
     monkeypatch.setattr(auth_controller, "send_password_reset_email", _capture)
+    return captured
+
+
+@pytest.fixture
+def captured_verification_emails(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    """Capture email-verification emails (so tests can extract the raw token)."""
+    captured: list[dict] = []
+
+    async def _capture(**kwargs):
+        captured.append(kwargs)
+
+    import app.controllers.auth as auth_controller
+
+    monkeypatch.setattr(auth_controller, "send_verification_email", _capture)
     return captured
 
 

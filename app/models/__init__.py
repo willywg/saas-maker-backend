@@ -7,10 +7,12 @@ and discovered by Alembic for migrations.
 
 from app.models.admin import AdminUser
 from app.models.tenant import (
+    EmailVerificationToken,
     InviteToken,
     Organization,
     OrganizationMember,
     PasswordResetToken,
+    RefreshToken,
     User,
 )
 
@@ -20,5 +22,7 @@ __all__ = [
     "OrganizationMember",
     "InviteToken",
     "PasswordResetToken",
+    "EmailVerificationToken",
+    "RefreshToken",
     "AdminUser",
 ]
