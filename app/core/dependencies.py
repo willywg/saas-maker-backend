@@ -54,8 +54,8 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> Aut
             role=role,
         )
 
-    except (ValueError, KeyError):
-        raise credentials_exception
+    except ValueError, KeyError:
+        raise credentials_exception from None
 
 
 def require_role(min_role: str):
@@ -129,8 +129,8 @@ async def get_current_admin(
             role=role,
         )
 
-    except (ValueError, KeyError):
-        raise credentials_exception
+    except ValueError, KeyError:
+        raise credentials_exception from None
 
 
 def require_admin(min_role: str = "super_admin"):

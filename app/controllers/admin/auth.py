@@ -96,7 +96,7 @@ async def admin_refresh(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token de refresh inválido",
-        )
+        ) from None
 
 
 @router.get("/me", response_model=AdminUserResponse)

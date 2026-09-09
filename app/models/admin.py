@@ -5,6 +5,8 @@ from datetime import datetime
 
 from sqlmodel import Field, SQLModel
 
+from app.core.time import utcnow
+
 
 class AdminUser(SQLModel, table=True):
     """
@@ -43,5 +45,5 @@ class AdminUser(SQLModel, table=True):
     is_active: bool = Field(default=True)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     last_login_at: datetime | None = Field(default=None)

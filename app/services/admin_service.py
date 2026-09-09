@@ -2,12 +2,13 @@
 
 import math
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.core.time import utcnow
 from app.models.admin import AdminUser
 from app.models.tenant import Organization, OrganizationMember, User
 from app.schemas.admin import (
@@ -27,7 +28,6 @@ from app.services.auth_service import (
     hash_password,
     verify_password,
 )
-
 
 # --- Admin Authentication ---
 
@@ -50,9 +50,7 @@ def create_admin_refresh_token(admin_id: uuid.UUID) -> str:
     return create_token(data, expires_delta, "admin_refresh")
 
 
-async def authenticate_admin(
-    session: AsyncSession, email: str, password: str
-) -> AdminUser | None:
+async def authenticate_admin(session: AsyncSession, email: str, password: str) -> AdminUser | None:
     """
     Authenticate an admin user.
 
@@ -71,7 +69,7 @@ async def authenticate_admin(
         return None
 
     # Update last login
-    admin.last_login_at = datetime.utcnow()
+    admin.last_login_at = utcnow()
     session.add(admin)
     await session.commit()
     await session.refresh(admin)
@@ -253,7 +251,7 @@ async def update_organization(
     if data.is_active is not None:
         org.is_active = data.is_active
 
-    org.updated_at = datetime.utcnow()
+    org.updated_at = utcnow()
     session.add(org)
     await session.commit()
     await session.refresh(org)
@@ -271,7 +269,7 @@ async def deactivate_organization(session: AsyncSession, org_id: uuid.UUID) -> b
         return False
 
     org.is_active = False
-    org.updated_at = datetime.utcnow()
+    org.updated_at = utcnow()
     session.add(org)
     await session.commit()
 
@@ -290,7 +288,7 @@ async def toggle_organization_status(
         return None
 
     org.is_active = is_active
-    org.updated_at = datetime.utcnow()
+    org.updated_at = utcnow()
     session.add(org)
     await session.commit()
     await session.refresh(org)
@@ -388,9 +386,7 @@ async def list_users(
     # Apply filters
     if search:
         search_term = f"%{search}%"
-        query = query.where(
-            (User.email.ilike(search_term)) | (User.full_name.ilike(search_term))
-        )
+        query = query.where((User.email.ilike(search_term)) | (User.full_name.ilike(search_term)))
 
     if is_active is not None:
         query = query.where(User.is_active == is_active)

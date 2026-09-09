@@ -33,9 +33,7 @@ async def get_my_organization(
 
     Requires: Any authenticated user (member, admin, or owner)
     """
-    organization = await organization_service.get_organization(
-        session, user.organization_id
-    )
+    organization = await organization_service.get_organization(session, user.organization_id)
 
     if not organization:
         raise HTTPException(
@@ -78,7 +76,7 @@ async def update_my_organization(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     return OrganizationResponse(
         id=str(organization.id),
@@ -154,13 +152,11 @@ async def invite_member(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     # Get inviter and organization info for email
     inviter = await session.get(User, user.user_id)
-    organization = await organization_service.get_organization(
-        session, user.organization_id
-    )
+    organization = await organization_service.get_organization(session, user.organization_id)
 
     invite_url = build_invite_url(invite_token.token)
 
@@ -211,7 +207,7 @@ async def change_member_role(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     # Get user details
     member_user = await session.get(User, user_id)
@@ -259,7 +255,7 @@ async def remove_member(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     if not removed:
         raise HTTPException(

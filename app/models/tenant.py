@@ -4,9 +4,12 @@ import secrets
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, ForeignKey as SAForeignKey
+from sqlalchemy import Column
+from sqlalchemy import ForeignKey as SAForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Field, SQLModel, UniqueConstraint
+
+from app.core.time import utcnow
 
 
 class Organization(SQLModel, table=True):
@@ -35,8 +38,8 @@ class Organization(SQLModel, table=True):
     is_active: bool = Field(default=True)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class User(SQLModel, table=True):
@@ -68,7 +71,7 @@ class User(SQLModel, table=True):
     email_verified: bool = Field(default=False)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     last_login_at: datetime | None = Field(default=None)
 
 
@@ -109,7 +112,7 @@ class OrganizationMember(SQLModel, table=True):
     )
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class InviteToken(SQLModel, table=True):
@@ -157,7 +160,7 @@ class InviteToken(SQLModel, table=True):
     )
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
 
     @classmethod
     def generate_token(cls) -> str:
@@ -175,7 +178,7 @@ class PasswordResetToken(SQLModel, table=True):
     __tablename__ = "password_reset_tokens"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="users.id", index=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
     token_hash: str = Field(max_length=64, index=True)
     expires_at: datetime
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)

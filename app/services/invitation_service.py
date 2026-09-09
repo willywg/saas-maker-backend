@@ -1,12 +1,13 @@
 """Invitation service for managing organization invitations."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.time import utcnow
 from app.models import InviteToken, Organization, OrganizationMember, User
 from app.services.auth_service import hash_password
 
@@ -70,7 +71,7 @@ async def create_invite_token(
         email=email,
         role=role,
         token=InviteToken.generate_token(),
-        expires_at=datetime.utcnow() + timedelta(days=settings.invite_token_expire_days),
+        expires_at=utcnow() + timedelta(days=settings.invite_token_expire_days),
         created_by=created_by,
     )
     session.add(invite)
@@ -107,7 +108,7 @@ async def get_invite_info(
     if invite.accepted_at is not None:
         raise ValueError("Esta invitación ya fue utilizada")
 
-    if invite.expires_at < datetime.utcnow():
+    if invite.expires_at < utcnow():
         raise ValueError("Esta invitación ha expirado")
 
     # Get organization info
@@ -161,7 +162,7 @@ async def accept_invitation(
     if invite.accepted_at is not None:
         raise ValueError("Esta invitación ya fue utilizada")
 
-    if invite.expires_at < datetime.utcnow():
+    if invite.expires_at < utcnow():
         raise ValueError("Esta invitación ha expirado")
 
     # Check if user already exists
@@ -204,7 +205,7 @@ async def accept_invitation(
     session.add(membership)
 
     # Mark invite as used
-    invite.accepted_at = datetime.utcnow()
+    invite.accepted_at = utcnow()
 
     await session.flush()
 

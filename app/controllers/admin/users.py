@@ -48,9 +48,7 @@ async def list_all_users(
     page_size: int = Query(20, ge=1, le=100, description="Elementos por página"),
     search: str | None = Query(None, description="Buscar por email o nombre"),
     is_active: bool | None = Query(None, description="Filtrar por estado activo"),
-    organization_id: uuid.UUID | None = Query(
-        None, description="Filtrar por organización"
-    ),
+    organization_id: uuid.UUID | None = Query(None, description="Filtrar por organización"),
     sort_by: str = Query("created_at", description="Campo para ordenar"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Orden"),
 ):

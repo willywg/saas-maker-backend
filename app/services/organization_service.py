@@ -1,11 +1,11 @@
 """Organization management service."""
 
 import uuid
-from datetime import datetime
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.time import utcnow
 from app.models.tenant import InviteToken, Organization, OrganizationMember, User
 from app.services import invitation_service
 
@@ -29,7 +29,7 @@ async def update_organization(
         if hasattr(organization, key) and value is not None:
             setattr(organization, key, value)
 
-    organization.updated_at = datetime.utcnow()
+    organization.updated_at = utcnow()
 
     session.add(organization)
     await session.commit()
@@ -37,9 +37,7 @@ async def update_organization(
     return organization
 
 
-async def list_members(
-    session: AsyncSession, organization_id: uuid.UUID
-) -> list[tuple[User, str]]:
+async def list_members(session: AsyncSession, organization_id: uuid.UUID) -> list[tuple[User, str]]:
     """
     List all members of an organization with their roles.
 

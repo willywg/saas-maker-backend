@@ -3,39 +3,39 @@
 import hashlib
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
+import jwt
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.core.time import utcnow
 from app.models import Organization, OrganizationMember, PasswordResetToken, User
-
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against a bcrypt hash."""
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except ValueError:
+        # Malformed hash (e.g. legacy or corrupted value)
+        return False
 
 
 def create_token(data: dict, expires_delta: timedelta, token_type: str) -> str:
     """Create a JWT token (access or refresh)."""
     to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta
+    expire = utcnow() + expires_delta
     to_encode.update({"exp": expire, "type": token_type})
 
-    encoded_jwt = jwt.encode(
-        to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
@@ -61,12 +61,10 @@ def create_refresh_token(user_id: uuid.UUID) -> str:
 def decode_token(token: str) -> dict:
     """Decode and validate a JWT token."""
     try:
-        payload = jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
-        )
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         return payload
-    except JWTError:
-        raise ValueError("Token inválido")
+    except jwt.PyJWTError as e:
+        raise ValueError("Token inválido") from e
 
 
 async def register_user(
@@ -168,7 +166,7 @@ async def authenticate_user(
     organization, role = org_data
 
     # Update last login
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = utcnow()
     session.add(user)
     await session.commit()
 
@@ -196,9 +194,7 @@ def _mask_email(email: str) -> str:
 # --- Password reset ---
 
 
-async def create_password_reset_token(
-    session: AsyncSession, email: str
-) -> tuple[str, str] | None:
+async def create_password_reset_token(session: AsyncSession, email: str) -> tuple[str, str] | None:
     """Create a password reset token. Returns (raw_token, user_name) or None."""
     email = email.lower().strip()
     statement = select(User).where(User.email == email, User.is_active == True)  # noqa: E712
@@ -214,8 +210,7 @@ async def create_password_reset_token(
     reset_token = PasswordResetToken(
         user_id=user.id,
         token_hash=token_hash,
-        expires_at=datetime.utcnow()
-        + timedelta(minutes=settings.password_reset_token_expire_minutes),
+        expires_at=utcnow() + timedelta(minutes=settings.password_reset_token_expire_minutes),
     )
     session.add(reset_token)
     await session.commit()
@@ -231,7 +226,7 @@ async def validate_password_reset_token(
 
     statement = select(PasswordResetToken).where(
         PasswordResetToken.token_hash == token_hash,
-        PasswordResetToken.expires_at > datetime.utcnow(),
+        PasswordResetToken.expires_at > utcnow(),
     )
     result = await session.execute(statement)
     reset_token = result.scalar_one_or_none()
@@ -249,15 +244,13 @@ async def validate_password_reset_token(
     return user.id, _mask_email(user.email)
 
 
-async def reset_password_with_token(
-    session: AsyncSession, token: str, new_password: str
-) -> bool:
+async def reset_password_with_token(session: AsyncSession, token: str, new_password: str) -> bool:
     """Reset password using a valid token. Returns True on success."""
     token_hash = _hash_reset_token(token)
 
     statement = select(PasswordResetToken).where(
         PasswordResetToken.token_hash == token_hash,
-        PasswordResetToken.expires_at > datetime.utcnow(),
+        PasswordResetToken.expires_at > utcnow(),
     )
     result = await session.execute(statement)
     reset_token = result.scalar_one_or_none()
@@ -276,9 +269,7 @@ async def reset_password_with_token(
     session.add(user)
 
     # Delete ALL reset tokens for this user (single-use)
-    await session.execute(
-        delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
-    )
+    await session.execute(delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id))
 
     await session.commit()
     return True

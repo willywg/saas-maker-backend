@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.dependencies import CurrentUser
 from app.db.session import get_session
 from app.models import Organization, OrganizationMember, User
@@ -24,7 +25,6 @@ from app.schemas.auth import (
     UserResponse,
     ValidateResetTokenResponse,
 )
-from app.core.config import settings
 from app.services import auth_service, invitation_service
 from app.services.email_service import send_password_reset_email, send_welcome_email
 
@@ -57,7 +57,7 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     # Generate tokens
     access_token = auth_service.create_access_token(
@@ -147,7 +147,7 @@ async def refresh(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token de actualización inválido",
-        )
+        ) from None
 
     # Get user and re-authenticate (to get fresh org/role data)
     statement = select(User).where(User.id == uuid.UUID(user_id))
@@ -254,7 +254,7 @@ async def get_invite_info(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     return InviteInfoResponse(**invite_info)
 
@@ -284,7 +284,7 @@ async def accept_invite(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     # Generate tokens (user is now logged in)
     access_token = auth_service.create_access_token(
@@ -387,7 +387,7 @@ async def update_profile(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
-        )
+        ) from e
 
     statement = select(Organization).where(Organization.id == user.organization_id)
     result = await session.execute(statement)
@@ -421,5 +421,5 @@ async def change_password(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
     return MessageResponse(message="Contraseña actualizada correctamente")

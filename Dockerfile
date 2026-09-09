@@ -1,5 +1,5 @@
 # --------- Builder Stage ---------
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS builder
 
 # Set environment variables for uv
 ENV UV_COMPILE_BYTECODE=1
@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
 
 # --------- Final Stage ---------
-FROM python:3.13-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # Create a non-root user for security
 RUN groupadd --gid 1000 app \
@@ -31,10 +31,10 @@ RUN groupadd --gid 1000 app \
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
 # Fix Python symlinks to point to system Python (uv creates symlinks to builder's Python)
-RUN rm -f /app/.venv/bin/python /app/.venv/bin/python3 /app/.venv/bin/python3.13 && \
-    ln -s /usr/local/bin/python3.13 /app/.venv/bin/python && \
+RUN rm -f /app/.venv/bin/python /app/.venv/bin/python3 /app/.venv/bin/python3.14 && \
+    ln -s /usr/local/bin/python3.14 /app/.venv/bin/python && \
     ln -s python /app/.venv/bin/python3 && \
-    ln -s python /app/.venv/bin/python3.13
+    ln -s python /app/.venv/bin/python3.14
 
 # Set the working directory
 WORKDIR /app

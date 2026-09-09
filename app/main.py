@@ -29,9 +29,7 @@ setup_cors(app)
 # Include tenant routers
 app.include_router(base.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(
-    organizations.router, prefix="/organizations", tags=["organizations"]
-)
+app.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
 
 # Include admin routers
 app.include_router(auth_router, prefix="/admin/auth", tags=["admin-auth"])

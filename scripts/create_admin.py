@@ -2,7 +2,8 @@
 """CLI script to create an admin user.
 
 Usage:
-    python scripts/create_admin.py --email admin@example.com --name "Admin Name" --password secret123
+    python scripts/create_admin.py --email admin@example.com --name "Admin Name" \
+        --password secret123
 
 Or interactively (will prompt for password):
     python scripts/create_admin.py --email admin@example.com --name "Admin Name"
@@ -63,7 +64,7 @@ async def main():
                 full_name=args.name,
                 role=args.role,
             )
-            print(f"✅ Admin creado exitosamente:")
+            print("✅ Admin creado exitosamente:")
             print(f"   ID: {admin.id}")
             print(f"   Email: {admin.email}")
             print(f"   Nombre: {admin.full_name}")

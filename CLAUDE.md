@@ -9,8 +9,14 @@ make dev              # Run dev server with auto-reload (port 8090)
 make migrate          # Apply Alembic migrations
 make makemigrations m="message"  # Create new migration
 make test             # Run pytest
-make install          # Install dependencies via uv
+make install          # Install dependencies via uv (incluye ruff/pytest)
+make lint             # ruff check + format check
+make format           # ruff auto-fix + format
+make audit            # Security audit of uv.lock (uv-secure)
+make upgrade          # uv lock --upgrade + sync + audit
 ```
+
+Requires Python 3.14 (see `.python-version`); `uv` downloads it automatically.
 
 ## Environment Setup
 
@@ -26,8 +32,8 @@ openssl rand -hex 32
 - SQLModel (SQLAlchemy + Pydantic)
 - PostgreSQL with asyncpg
 - Alembic for migrations
-- python-jose for JWT
-- passlib + bcrypt for passwords
+- PyJWT for JWT
+- bcrypt for password hashing
 
 ### Directory Structure
 ```

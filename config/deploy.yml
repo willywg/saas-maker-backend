@@ -23,7 +23,7 @@ env:
     DEBUG: "false"
     POSTGRES_HOST: saas-template-api-db
     POSTGRES_PORT: 5432
-    CORS_ORIGINS: "*"
+    CORS_ORIGINS: "https://app.example.com,https://admin.example.com"
   secret:
     # --- Database Credentials ---
     - POSTGRES_USER

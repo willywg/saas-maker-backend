@@ -1,7 +1,10 @@
-from pydantic_settings import BaseSettings
+from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
     # App
     app_name: str = "SaaS Template"
     debug: bool = False
@@ -30,7 +33,7 @@ class Settings(BaseSettings):
 
     # Invitation System
     invite_token_expire_days: int = 7
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:5190"
 
     # Password Reset
     password_reset_token_expire_minutes: int = 30
@@ -52,9 +55,15 @@ class Settings(BaseSettings):
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    @model_validator(mode="after")
+    def _validate_secrets(self) -> Settings:
+        if not self.jwt_secret_key or self.jwt_secret_key == "your_secret_key_here":
+            raise ValueError(
+                "JWT_SECRET_KEY no está configurado. Genera uno con: openssl rand -hex 32"
+            )
+        if len(self.jwt_secret_key) < 32:
+            raise ValueError("JWT_SECRET_KEY debe tener al menos 32 caracteres")
+        return self
 
 
 settings = Settings()

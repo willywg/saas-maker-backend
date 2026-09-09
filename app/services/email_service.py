@@ -43,12 +43,14 @@ async def send_welcome_email(
     try:
         conf = get_mail_config()
         template_vars = _get_common_template_vars()
-        template_vars.update({
-            "greeting": "¡Bienvenido",
-            "user_name": user_name or email_to.split("@")[0],
-            "organization_name": organization_name,
-            "dashboard_url": dashboard_url,
-        })
+        template_vars.update(
+            {
+                "greeting": "¡Bienvenido",
+                "user_name": user_name or email_to.split("@")[0],
+                "organization_name": organization_name,
+                "dashboard_url": dashboard_url,
+            }
+        )
 
         message = MessageSchema(
             subject=f"¡Bienvenido a {conf.MAIL_FROM_NAME}!",
@@ -88,13 +90,15 @@ async def send_invitation_email(
         role_label = ROLE_LABELS.get(role, role)
 
         template_vars = _get_common_template_vars()
-        template_vars.update({
-            "organization_name": organization_name,
-            "inviter_name": inviter_name,
-            "role_label": role_label,
-            "invite_url": invite_url,
-            "expires_at": expires_at,
-        })
+        template_vars.update(
+            {
+                "organization_name": organization_name,
+                "inviter_name": inviter_name,
+                "role_label": role_label,
+                "invite_url": invite_url,
+                "expires_at": expires_at,
+            }
+        )
 
         message = MessageSchema(
             subject=f"Invitación a {organization_name} - {conf.MAIL_FROM_NAME}",
@@ -121,11 +125,13 @@ async def send_password_reset_email(
     try:
         conf = get_mail_config()
         template_vars = _get_common_template_vars()
-        template_vars.update({
-            "user_name": user_name or email_to.split("@")[0],
-            "reset_url": reset_url,
-            "expire_minutes": expire_minutes,
-        })
+        template_vars.update(
+            {
+                "user_name": user_name or email_to.split("@")[0],
+                "reset_url": reset_url,
+                "expire_minutes": expire_minutes,
+            }
+        )
 
         message = MessageSchema(
             subject=f"Restablecer contraseña - {conf.MAIL_FROM_NAME}",

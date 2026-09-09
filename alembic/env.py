@@ -7,16 +7,17 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 from alembic import context
+from app.core.config import settings
 
 # CRITICAL: Import ALL models so SQLModel.metadata registers them
 from app.models import (  # noqa: F401
-    Organization,
-    User,
-    OrganizationMember,
+    AdminUser,
     InviteToken,
+    Organization,
+    OrganizationMember,
+    PasswordResetToken,
+    User,
 )
-
-from app.core.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
