@@ -80,6 +80,14 @@ CurrentUser             # Type alias for dependency injection
 - `PUT /organizations/members/{user_id}/role` - Change role (owner)
 - `DELETE /organizations/members/{user_id}` - Remove member (owner)
 
+### Tests (`tests/`)
+- Run with `make test`. Needs a local Postgres; uses (and creates) `saas_template_test`.
+- `conftest.py` resets the schema and runs the real Alembic migrations once per session,
+  truncates tables between tests, stubs SMTP, and exposes `client`, `owner_tokens`,
+  `register()` and `auth_headers()` helpers.
+- Every new endpoint gets a test next to the existing ones (`test_auth.py`,
+  `test_organizations.py`, `test_admin.py`, `test_password_reset.py`).
+
 ### Adding New Features
 1. Create model in `app/models/`
 2. Create schemas in `app/schemas/`
@@ -87,3 +95,4 @@ CurrentUser             # Type alias for dependency injection
 4. Create controller in `app/controllers/`
 5. Register router in `app/main.py`
 6. Run `make makemigrations m="description"` then `make migrate`
+7. Add tests in `tests/` and run `make test` + `make lint`

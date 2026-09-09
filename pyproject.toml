@@ -41,4 +41,8 @@ ignore = ["E711", "E712", "B008"]  # E711/E712: comparaciones SQLAlchemy; B008: 
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["error::DeprecationWarning:app.*"]

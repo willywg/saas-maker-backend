@@ -12,7 +12,7 @@ migrate:
 makemigrations:
 	uv run alembic revision --autogenerate -m "$(m)"
 
-# Run tests
+# Run tests (needs local Postgres; uses database saas_template_test)
 test:
 	uv run pytest
 
@@ -26,13 +26,13 @@ sync:
 
 # Lint (ruff check + format check)
 lint:
-	uv run ruff check app scripts alembic/env.py
-	uv run ruff format --check app scripts alembic/env.py
+	uv run ruff check app scripts tests alembic/env.py
+	uv run ruff format --check app scripts tests alembic/env.py
 
 # Auto-fix lint and format
 format:
-	uv run ruff check --fix app scripts alembic/env.py
-	uv run ruff format app scripts alembic/env.py
+	uv run ruff check --fix app scripts tests alembic/env.py
+	uv run ruff format app scripts tests alembic/env.py
 
 # Security audit of uv.lock against PyPI/OSV advisories
 audit:
