@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from slowapi.errors import RateLimitExceeded
 
-from app.controllers import auth, base, organizations
+from app.controllers import auth, base, organizations, projects
 from app.controllers.admin import auth_router, organizations_router, users_router
 from app.core.config import settings
 from app.core.middleware import setup_cors
@@ -36,6 +36,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 app.include_router(base.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
+app.include_router(projects.router, prefix="/projects", tags=["projects"])
 # generator:tenant-routers
 
 # Include admin routers

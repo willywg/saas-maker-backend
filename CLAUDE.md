@@ -95,6 +95,9 @@ CurrentUser             # Type alias for dependency injection
 - `POST /organizations/members/invite` - Create invitation (admin+)
 - `PUT /organizations/members/{user_id}/role` - Change role (owner)
 - `DELETE /organizations/members/{user_id}` - Remove member (owner)
+- `GET/POST /projects`, `GET/PUT/DELETE /projects/{id}` - Reference tenant-scoped resource
+  (read: any member; write: admin+; other orgs get 404). Paginated list with `q`, `status`,
+  `page`, `page_size`.
 
 ### Tests (`tests/`)
 - Run with `make test`. Needs a local Postgres; uses (and creates) `saas_template_test`.
@@ -105,6 +108,10 @@ CurrentUser             # Type alias for dependency injection
   `test_organizations.py`, `test_admin.py`, `test_password_reset.py`).
 
 ### Adding New Features
+Copy the `projects` module (`app/models/project.py`, `app/schemas/project.py`,
+`app/services/project_service.py`, `app/controllers/projects.py`, `tests/test_projects.py`).
+Non-negotiable: every service function takes `organization_id` and filters by it; a resource
+from another organization answers 404. Insert registrations at the `# generator:*` anchors.
 1. Create model in `app/models/`
 2. Create schemas in `app/schemas/`
 3. Create service in `app/services/`

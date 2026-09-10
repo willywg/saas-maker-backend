@@ -6,6 +6,7 @@ and discovered by Alembic for migrations.
 """
 
 from app.models.admin import AdminUser
+from app.models.project import Project
 from app.models.tenant import (
     EmailVerificationToken,
     InviteToken,
@@ -25,5 +26,6 @@ __all__ = [
     "EmailVerificationToken",
     "RefreshToken",
     "AdminUser",
+    "Project",
     # generator:models
 ]
