@@ -3,6 +3,8 @@ name = "saas-template"
 version = "0.1.0"
 description = "Multi-tenant SaaS platform template"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.19.2",
