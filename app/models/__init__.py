@@ -25,4 +25,5 @@ __all__ = [
     "EmailVerificationToken",
     "RefreshToken",
     "AdminUser",
+    # generator:models
 ]

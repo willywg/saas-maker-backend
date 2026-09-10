@@ -36,6 +36,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 app.include_router(base.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
+# generator:tenant-routers
 
 # Include admin routers
 app.include_router(auth_router, prefix="/admin/auth", tags=["admin-auth"])
